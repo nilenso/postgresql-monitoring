@@ -1,58 +1,18 @@
-# Queries to monitor your PostgreSQL database
-
-These have been compiled from multiple sources like the [postgresql wiki](https://wiki.postgresql.org/wiki/Main_Page), and [check_postgres](https://bucardo.org/wiki/Check_postgres).
-
-## Usage
-These `PREPARE`d statements are essentially queries with names (and 0 arguments) for convenience. Once you have executed a `PREPARE`, you can run it using `EXECUTE` like so:
-
-```sql
-EXECUTE query_stats;
-```
-
-You can either copy/paste these in selectively, or use the [full list of queries](./monitor.sql).
-
-## Cost
-These queries can be run periodically to send data to your monitoring system. They are all cheap enough to be run every few seconds even during heavy load.
-
-
-## Queries
-### query_stats
-```sql
-PREPARE query_stats AS
-SELECT LEFT(query,50) AS query,
-       calls, total_time, rows, shared_blks_hit,
-       local_blks_hit, blk_read_time, blk_write_time
-FROM pg_stat_statements
-WHERE EXISTS(SELECT * FROM pg_available_extensions
-             WHERE name = 'pg_stat_statements')
-ORDER BY calls DESC;
-```
-
-- This requires [pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html) to be set up. It's a part of the contrib package, and needs to be added to `shared_preload_libraries` in `postgresql.conf`.
-
-## Cache
-### cache_tables
-```sql
+-- Cache
 PREPARE cache_tables AS
 SELECT relname AS "relation",
        heap_blks_read AS heap_read,
        heap_blks_hit AS heap_hit,
        ( (heap_blks_hit*100) / NULLIF((heap_blks_hit + heap_blks_read), 0)) AS ratio
 FROM pg_statio_user_tables;
-```
 
-### cache_total
-```sql
 PREPARE cache_total AS
 SELECT sum(heap_blks_read) AS heap_read,
        sum(heap_blks_hit)  AS heap_hit,
        (sum(heap_blks_hit)*100 / NULLIF((sum(heap_blks_hit) + sum(heap_blks_read)),0)) AS ratio
 FROM pg_statio_user_tables;
-```
 
-## Disk usage
-### table_sizes
-```sql
+-- Disk usage
 PREPARE table_sizes AS
 SELECT relname AS "relation",
        pg_total_relation_size(C.oid) AS "total_size"
@@ -62,10 +22,7 @@ WHERE nspname NOT IN ('pg_catalog', 'information_schema')
       AND C.relkind <> 'i'
       AND nspname ='public'
 ORDER BY pg_total_relation_size(C.oid) DESC;
-```
 
-### relation_sizes
-```sql
 PREPARE relation_sizes AS
 SELECT relname AS "relation",
     pg_relation_size(C.oid) AS "size"
@@ -73,17 +30,11 @@ FROM pg_class C
 LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
 WHERE nspname = 'public'
 ORDER BY pg_relation_size(C.oid) DESC;
-```
 
-### db_size
-```sql
 PREPARE db_size AS
 SELECT pg_database_size(current_database());
-```
 
-## Bloat
-### table_bloat
-```sql
+-- Bloat
 PREPARE table_bloat AS
 SELECT tblname as "relation", bs*tblpages AS real_size,
   (tblpages-est_tblpages)*bs AS extra_size,
@@ -95,7 +46,7 @@ SELECT tblname as "relation", bs*tblpages AS real_size,
     THEN 100 * (tblpages - est_tblpages_ff)/tblpages::float
     ELSE 0
   END AS bloat_ratio, is_na::varchar
-  ## , (pst).free_percent + (pst).dead_tuple_percent AS real_frag
+  -- , (pst).free_percent + (pst).dead_tuple_percent AS real_frag
 FROM (
   SELECT ceil( reltuples / ( (bs-page_hdr)/tpl_size ) ) + ceil( toasttuples / 4 ) AS est_tblpages,
     ceil( reltuples / ( (bs-page_hdr)*fillfactor/(tpl_size*100) ) ) + ceil( toasttuples / 4 ) AS est_tblpages_ff,
@@ -136,10 +87,7 @@ FROM (
     ) AS s
   ) AS s2
 ) AS s3;
-```
 
-### table_and_index_bloat
-```sql
 PREPARE table_and_index_bloat AS
 SELECT
   tablename AS "relation", reltuples::bigint AS tups, relpages::bigint AS pages, otta,
@@ -210,11 +158,8 @@ FROM (
   LEFT JOIN pg_index i ON indrelid = cc.oid
   LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
 ) AS sml;
-```
 
-## Indexes
-### index_usage
-```sql
+-- Indexes
 PREPARE index_usage AS
 SELECT
     t.tablename AS "relation",
@@ -236,15 +181,23 @@ LEFT OUTER JOIN
     ON t.tablename = foo.ctablename
 WHERE t.schemaname='public'
 ORDER BY 1,2;
-```
 
-## Tuples and Autovacuum
-### tuple_info
-```sql
+-- Tuples
 PREPARE tuple_info AS
 SELECT relname as "relation", EXTRACT (EPOCH FROM current_timestamp-last_autovacuum) as since_last_av,
        autovacuum_count as av_count, n_tup_ins, n_tup_upd, n_tup_del, n_live_tup, n_dead_tup
 FROM pg_stat_all_tables
 WHERE schemaname = 'public'
 ORDER BY relname;
-```
+
+
+-- queries
+
+PREPARE queries AS
+SELECT LEFT(query,50) AS query,
+       calls, total_time, rows, shared_blks_hit,
+       local_blks_hit, blk_read_time, blk_write_time
+FROM pg_stat_statements
+WHERE EXISTS(SELECT * FROM pg_available_extensions
+             WHERE name = 'pg_stat_statements')
+ORDER BY calls DESC;
