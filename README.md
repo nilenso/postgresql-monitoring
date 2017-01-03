@@ -16,6 +16,12 @@ These queries can be run periodically to send data to your monitoring system. Th
 
 
 ## Queries
+### query_status
+```sql
+PREPARE current_queries_status AS
+SELECT count(pid), query, waiting from pg_stat_activity group by query, waiting;
+```
+
 ### query_stats
 ```sql
 PREPARE query_stats AS
