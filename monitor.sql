@@ -211,9 +211,9 @@ SELECT application_name,client_addr,state,sent_location,write_location,replay_lo
                  (sent_offset - (replay_offset - (sent_xlog - replay_xlog) * 255 * 16 ^ 6 ))::text AS byte_lag
                   FROM (SELECT
                           application_name,client_addr,state,sync_state,sent_location,write_location,replay_location,
-                          ('x' || lpad(split_part(sent_location,   '/', 1), 8, '0'))::bit(32)::bigint AS sent_xlog,
-                          ('x' || lpad(split_part(replay_location, '/', 1), 8, '0'))::bit(32)::bigint AS replay_xlog,
-                          ('x' || lpad(split_part(sent_location,   '/', 2), 8, '0'))::bit(32)::bigint AS sent_offset,
-                          ('x' || lpad(split_part(replay_location, '/', 2), 8, '0'))::bit(32)::bigint AS replay_offset
+                          ('x' || lpad(split_part(sent_location::text,   '/', 1), 8, '0'))::bit(32)::bigint AS sent_xlog,
+                          ('x' || lpad(split_part(replay_location::text, '/', 1), 8, '0'))::bit(32)::bigint AS replay_xlog,
+                          ('x' || lpad(split_part(sent_location::text,   '/', 2), 8, '0'))::bit(32)::bigint AS sent_offset,
+                          ('x' || lpad(split_part(replay_location::text, '/', 2), 8, '0'))::bit(32)::bigint AS replay_offset
                         FROM pg_stat_replication)
                   AS s;
