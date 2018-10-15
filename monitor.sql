@@ -36,12 +36,12 @@ SELECT pg_size_pretty(pg_database_size(current_database()));
 
 -- Bloat
 PREPARE table_bloat AS
-SELECT tblname as "relation", bs*tblpages AS real_size,
-  (tblpages-est_tblpages)*bs AS extra_size,
+SELECT tblname as "relation", pg_size_pretty((bs*tblpages)::bigint) AS real_size,
+  pg_size_pretty(((tblpages-est_tblpages)*bs)::bigint) AS extra_size,
   CASE WHEN tblpages - est_tblpages > 0
     THEN 100 * (tblpages - est_tblpages)/tblpages::float
     ELSE 0
-  END AS extra_ratio, fillfactor, (tblpages-est_tblpages_ff)*bs AS bloat_size,
+  END AS extra_ratio, fillfactor, pg_size_pretty(((tblpages-est_tblpages_ff)*bs)::bigint) AS bloat_size,
   CASE WHEN tblpages - est_tblpages_ff > 0
     THEN 100 * (tblpages - est_tblpages_ff)/tblpages::float
     ELSE 0
@@ -165,8 +165,8 @@ SELECT
     t.tablename AS "relation",
     indexname,
     c.reltuples AS num_rows,
-    pg_relation_size(quote_ident(t.tablename)::text) AS table_size,
-    pg_relation_size(quote_ident(indexrelname)::text) AS index_size,
+    pg_size_pretty(pg_relation_size(quote_ident(t.tablename)::text)) AS table_size,
+    pg_size_pretty(pg_relation_size(quote_ident(indexrelname)::text)) AS index_size,
     idx_scan AS number_of_scans,
     idx_tup_read AS tuples_read,
     idx_tup_fetch AS tuples_fetched
