@@ -206,10 +206,10 @@ ORDER BY calls DESC;
 
 PREPARE current_queries_status_with_locks AS
 SELECT count(pg_stat_activity.pid) AS number_of_queries,
-       substring(trim(LEADING \
+       substring(trim(LEADING
                       FROM regexp_replace(pg_stat_activity.query, '[\n\r]+'::text,
-                       ' '::text, 'g'::text)) \
-                 FROM 0 \
+                       ' '::text, 'g'::text))
+                 FROM 0
                  FOR 100) AS query_name,
        max(age(CURRENT_TIMESTAMP, query_start)) AS max_wait_time,
        waiting,
