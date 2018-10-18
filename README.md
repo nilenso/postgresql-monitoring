@@ -311,6 +311,6 @@ SELECT application_name,client_addr,state, \\
                           ('x' || lpad(split_part(sent_lsn::text,   '/', 2), 8, '0'))::bit(32)::bigint AS sent_offset, \\
                           ('x' || lpad(split_part(replay_lsn::text, '/', 2), 8, '0'))::bit(32)::bigint AS replay_offset \\
                         FROM pg_stat_replication) \\
-                  AS s
+                  AS s;
 ```
 
