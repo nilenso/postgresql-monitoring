@@ -204,9 +204,34 @@ WHERE EXISTS(SELECT * FROM pg_available_extensions
              WHERE name = 'pg_stat_statements')
 ORDER BY calls DESC;
 
+PREPARE current_queries_status_with_locks AS
+SELECT count(pg_stat_activity.pid) AS number_of_queries,
+       substring(trim(LEADING
+                      FROM query)
+                 FROM 0
+                 FOR 200) AS query_name,
+       max(age(CURRENT_TIMESTAMP, query_start)) AS max_wait_time,
+       waiting,
+       usename,
+       locktype,
+       mode,
+       granted
+  FROM pg_stat_activity
+  LEFT JOIN pg_locks ON pg_stat_activity.pid = pg_locks.pid
+  WHERE query != '<IDLE>'
+    AND query NOT ILIKE '%pg_%' AND query NOT ILIKE '%application_name%' AND query NOT ILIKE '%inet%'
+    AND age(CURRENT_TIMESTAMP, query_start) > '3 milliseconds'::interval
+  GROUP BY query_name,
+           waiting,
+           usename,
+           locktype,
+           mode,
+           granted
+  ORDER BY max_wait_time DESC;                                    
+                                    
 
 -- replication
-PREPARE replication_status AS
+PREPARE replication_status_9 AS
 SELECT application_name,client_addr,state,sent_location,write_location,replay_location,
                  (sent_offset - (replay_offset - (sent_xlog - replay_xlog) * 255 * 16 ^ 6 ))::text AS byte_lag
                   FROM (SELECT
@@ -217,3 +242,15 @@ SELECT application_name,client_addr,state,sent_location,write_location,replay_lo
                           ('x' || lpad(split_part(replay_location::text, '/', 2), 8, '0'))::bit(32)::bigint AS replay_offset
                         FROM pg_stat_replication)
                   AS s;
+
+PREPARE replication_status_10 AS
+SELECT application_name,client_addr,state, \\
+                 (sent_offset - (replay_offset - (sent_xlog - replay_xlog) * 255 * 16 ^ 6 ))::text AS byte_lag \\
+                  FROM (SELECT \\
+                          application_name,client_addr,state,sync_state,sent_lsn,write_lsn,replay_lsn, \\
+                          ('x' || lpad(split_part(sent_lsn::text,   '/', 1), 8, '0'))::bit(32)::bigint AS sent_xlog, \\
+                          ('x' || lpad(split_part(replay_lsn::text, '/', 1), 8, '0'))::bit(32)::bigint AS replay_xlog, \\
+                          ('x' || lpad(split_part(sent_lsn::text,   '/', 2), 8, '0'))::bit(32)::bigint AS sent_offset, \\
+                          ('x' || lpad(split_part(replay_lsn::text, '/', 2), 8, '0'))::bit(32)::bigint AS replay_offset \\
+                        FROM pg_stat_replication) \\
+                  AS s; 
