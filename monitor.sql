@@ -210,7 +210,7 @@ SELECT count(pg_stat_activity.pid) AS number_of_queries,
                       FROM regexp_replace(pg_stat_activity.query, '[\n\r]+'::text,
                        ' '::text, 'g'::text))
                  FROM 0
-                 FOR 100) AS query_name,
+                 FOR 200) AS query_name,
        max(age(CURRENT_TIMESTAMP, query_start)) AS max_wait_time,
        waiting,
        usename,
@@ -221,7 +221,7 @@ SELECT count(pg_stat_activity.pid) AS number_of_queries,
   LEFT JOIN pg_locks ON pg_stat_activity.pid = pg_locks.pid
   WHERE query != '<IDLE>'
     AND query NOT ILIKE '%pg_%' AND query NOT ILIKE '%application_name%' AND query NOT ILIKE '%inet%'
-    AND age(CURRENT_TIMESTAMP, query_start) > '3 milliseconds'::interval
+    AND age(CURRENT_TIMESTAMP, query_start) > '5 milliseconds'::interval
   GROUP BY query_name,
            waiting,
            usename,
