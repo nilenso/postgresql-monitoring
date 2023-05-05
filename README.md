@@ -94,6 +94,25 @@ ORDER BY calls DESC;
 
 - This requires [pg_stat_statements](http://www.postgresql.org/docs/current/static/pgstatstatements.html) to be set up. It's a part of the contrib package, and needs to be added to `shared_preload_libraries` in `postgresql.conf`.
 
+## Long Running Queries
+```
+sql
+SELECT
+  pid,
+  user,
+  pg_stat_activity.query_start,
+  now() - pg_stat_activity.query_start AS query_time,
+  query,
+  state,
+  wait_event_type,
+  wait_event
+FROM pg_stat_activity
+WHERE (now() - pg_stat_activity.query_start) > interval '5 minutes';
+```
+
+This enables your to queries running for more than x Minutes (5 here). This gives you visibility as what might be hogging up your CPU and network pool.
+Crucial in determining what might take your DB down in high traffic.
+
 ## Cache
 ### cache_tables
 ```sql
